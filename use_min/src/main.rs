@@ -2,19 +2,13 @@ use shvessel::callback::{CommandCall, CommandCallback, CommandResult};
 use shvessel::cmd;
 use shvessel::vessel::Vessel;
 
-// This Example is so minimal that it should be self explanatory
+// This Example is so minimal simple sync call (no poll needed)
 // For reference see the /use/ demo
 
 fn main() {
-    use_min();
-}
-
-fn use_min() {
     let mut vessel = Vessel::<1, 1>::new();
     let _ = vessel.register(cmd::ENVIRONMENT, CommandCallback::syn_call(env_sync));
     let args = []; // environment needs no args
-
-    std::println!("{}", cmd::ENVIRONMENT);
     let _ = vessel.execute("env", &args);
 }
 
