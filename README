@@ -1,0 +1,5 @@
+core = minimal Rust primitives, available in no_std.
+
+That is the only dependency of Shell Vessel so Platform Devs have an advandage in integration.
+
+Please refere to the /use Example for reference.
