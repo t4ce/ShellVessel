@@ -1,5 +1,5 @@
-use crate::arg::{ArgumentKind, ArgumentTemplate};
 use crate::Command;
+use crate::arg::{ArgumentKind, ArgumentTemplate};
 
 pub const MOVE: Command = Command::new("move", "mv", "move a value from source to destination");
 pub const REMOVE: Command = Command::new("remove", "rm", "remove a value");

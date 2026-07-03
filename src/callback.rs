@@ -1,6 +1,6 @@
+use crate::ReturnCodes;
 use crate::arg::Argument;
 use crate::job::PlatformJob;
-use crate::ReturnCodes;
 
 pub type CommandResult = Result<(), ReturnCodes>;
 pub type CommandHandler = for<'a> fn(CommandCall<'a>) -> Result<PlatformJob, ReturnCodes>;
@@ -22,7 +22,13 @@ impl<'a> CommandCall<'a> {
         Self { arguments, context }
     }
 
-    pub unsafe fn context_mut<T>(&self) -> Option<&mut T> {
+    /// Returns the callback context as a mutable reference.
+    ///
+    /// # Safety
+    ///
+    /// The stored context pointer must be null or valid for writes as `T`,
+    /// properly aligned, and uniquely borrowed for the returned lifetime.
+    pub unsafe fn context_mut<T>(&mut self) -> Option<&mut T> {
         unsafe { self.context.cast::<T>().as_mut() }
     }
 }

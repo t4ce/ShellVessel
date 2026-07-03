@@ -1,11 +1,11 @@
 use core::fmt;
 
+use crate::Command;
 use crate::arg::{Argument, ArgumentKind, ArgumentTemplate};
 use crate::cmd::CommandList;
 use crate::help::Help;
 use crate::job::{CommandJob, JobId, JobTimeout, PlatformJob};
 use crate::path::{Path, TextPath};
-use crate::Command;
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

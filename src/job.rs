@@ -1,7 +1,7 @@
 use core::task::{Context, Poll};
 
 use crate::callback::{CommandOutcome, CommandResult};
-use crate::{Command, ReturnCodes, MAX_RUNNING_JOBS};
+use crate::{Command, MAX_RUNNING_JOBS, ReturnCodes};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct JobId(pub u64);
@@ -116,7 +116,11 @@ impl<const CAPACITY: usize> JobQueue<CAPACITY> {
         }
     }
 
-    pub fn push(&mut self, command: Command, outcome: CommandOutcome) -> Result<JobId, ReturnCodes> {
+    pub fn push(
+        &mut self,
+        command: Command,
+        outcome: CommandOutcome,
+    ) -> Result<JobId, ReturnCodes> {
         self.push_with_timeout(command, None, outcome)
     }
 
@@ -132,8 +136,12 @@ impl<const CAPACITY: usize> JobQueue<CAPACITY> {
                 let id = JobId(self.next_id);
                 self.next_id = self.next_id.wrapping_add(1).max(1);
                 self.jobs[index] = Some(match outcome {
-                    CommandOutcome::Platform(platform) => CommandJob::pending(id, command, timeout, platform),
-                    CommandOutcome::Ready(result) => CommandJob::ready(id, command, timeout, result),
+                    CommandOutcome::Platform(platform) => {
+                        CommandJob::pending(id, command, timeout, platform)
+                    }
+                    CommandOutcome::Ready(result) => {
+                        CommandJob::ready(id, command, timeout, result)
+                    }
                 });
                 return Ok(id);
             }
@@ -162,10 +170,10 @@ impl<const CAPACITY: usize> JobQueue<CAPACITY> {
     ) -> Result<Poll<CommandResult>, ReturnCodes> {
         let mut index = 0;
         while index < self.jobs.len() {
-            if let Some(job) = self.jobs[index].as_mut() {
-                if job.id == id {
-                    return Ok(job.poll(runtime, context));
-                }
+            if let Some(job) = self.jobs[index].as_mut()
+                && job.id == id
+            {
+                return Ok(job.poll(runtime, context));
             }
             index += 1;
         }

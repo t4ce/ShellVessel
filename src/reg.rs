@@ -1,5 +1,5 @@
 use crate::callback::{CommandCallback, CommandResult};
-use crate::{Command, ReturnCodes, COMMAND_REGISTRY_CAPACITY};
+use crate::{COMMAND_REGISTRY_CAPACITY, Command, ReturnCodes};
 
 #[derive(Clone, Copy)]
 pub struct RegisteredCommand {
@@ -39,16 +39,15 @@ impl<const CAPACITY: usize> CommandRegistry<CAPACITY> {
     pub fn find(&self, name: &str) -> Option<RegisteredCommand> {
         let mut index = 0;
         while index < self.commands.len() {
-            if let Some(command) = self.commands[index] {
-                if command.command.matches(name) {
-                    return Some(command);
-                }
+            if let Some(command) = self.commands[index]
+                && command.command.matches(name)
+            {
+                return Some(command);
             }
             index += 1;
         }
         None
     }
-
 }
 
 impl<const CAPACITY: usize> Default for CommandRegistry<CAPACITY> {

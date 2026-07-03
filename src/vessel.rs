@@ -5,9 +5,12 @@ use crate::callback::{CommandCallback, CommandResult};
 use crate::exec;
 use crate::job::{JobId, JobQueue, JobTimeout, PlatformRuntime};
 use crate::reg::CommandRegistry;
-use crate::{Command, ReturnCodes, COMMAND_REGISTRY_CAPACITY, MAX_RUNNING_JOBS};
+use crate::{COMMAND_REGISTRY_CAPACITY, Command, MAX_RUNNING_JOBS, ReturnCodes};
 
-pub struct Vessel<const COMMANDS: usize = COMMAND_REGISTRY_CAPACITY, const JOBS: usize = MAX_RUNNING_JOBS> {
+pub struct Vessel<
+    const COMMANDS: usize = COMMAND_REGISTRY_CAPACITY,
+    const JOBS: usize = MAX_RUNNING_JOBS,
+> {
     registry: CommandRegistry<COMMANDS>,
     jobs: JobQueue<JOBS>,
 }

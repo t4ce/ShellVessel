@@ -1,7 +1,7 @@
+use crate::ReturnCodes;
 use crate::arg::Argument;
 use crate::job::{JobId, JobQueue, JobTimeout};
 use crate::reg::CommandRegistry;
-use crate::ReturnCodes;
 
 pub fn execute<'a, const COMMANDS: usize, const JOBS: usize>(
     registry: &CommandRegistry<COMMANDS>,
