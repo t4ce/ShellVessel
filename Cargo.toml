@@ -10,5 +10,13 @@ readme = "README"
 keywords = ["shell", "commands", "no-std", "embedded", "platform"]
 categories = ["no-std", "embedded", "command-line-utilities"]
 
+[features]
+default = []
+mini_exec = []
+
 [lib]
 path = "src/lib.rs"
+
+[[example]]
+name = "mini_exec_proof"
+required-features = ["mini_exec"]

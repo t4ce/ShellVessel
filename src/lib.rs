@@ -6,6 +6,8 @@ pub mod cmd;
 pub mod exec;
 pub mod help;
 pub mod job;
+#[cfg(feature = "mini_exec")]
+pub mod mini_exec;
 pub mod path;
 pub mod pretty;
 pub mod reg;

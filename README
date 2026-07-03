@@ -160,6 +160,44 @@ fn env_sync(_call: CommandCall<'_>) -> CommandResult {
 - `/use` shows a fuller host-side demo with custom commands, arguments, sync
   callbacks, async callbacks, job polling, and cleanup.
 - `/use_min` shows the smallest sync-only integration.
+- `cargo run --example mini_exec_proof --features mini_exec` shows the optional
+  mini executor bridge and prints proof markers:
+
+```text
+SHVESSEL_MINI_EXEC:spawned:1
+SHVESSEL_MINI_EXEC:woke_at:25ms
+SHVESSEL_MINI_EXEC:done
+```
+- `/esp32s3-mini-exec` is a contained `esp-hal` ESP32-S3 project that runs the
+  same bridge on hardware and prints `SHVESSEL_ESP_HAL:*` proof markers.
+
+## Optional mini executor
+
+The `mini_exec` feature adds a tiny `no_std` cooperative executor for platforms
+that have hardware access but no RTOS or Embassy executor.
+
+It is opt-in and has no effect on existing integrations:
+
+```toml
+shvessel = { version = "0.1.1", features = ["mini_exec"] }
+```
+
+The executor is fixed-capacity and platform-clock driven. A command callback can
+spawn a mini task and return its `PlatformJob`; `Vessel::poll_job` then polls the
+same executor through the existing `PlatformRuntime` trait.
+
+On an ESP32-S3 `esp-hal` application, the platform loop would typically:
+
+```text
+read UART or USB-serial input
+execute commands through Vessel
+advance MiniExecutor with SYSTIMER/timer milliseconds
+poll ready Vessel jobs
+sleep or wait for the next serial/timer interrupt
+```
+
+That keeps ESP-specific timer, interrupt, and serial details outside Shell
+Vessel, while still proving the command/job/runtime layer.
 
 ## Fit
 
