@@ -1,5 +1,169 @@
-core = minimal Rust primitives, available in no_std.
+# Shell Vessel
 
-That is the only dependency of Shell Vessel so Platform Devs have an advandage in integration.
+Shell Vessel is a tiny `no_std` command registry and job vessel for platform
+shells, embedded consoles, kernels, bootloaders, firmware monitors, and other
+places where you want a clean command surface without dragging in a runtime.
 
-Please refere to the /use Example for reference.
+It keeps the shell structure small and explicit:
+
+- define commands once, with long name, short name, and help text
+- register each command with a sync or async callback
+- execute commands through one `Vessel`
+- track command work as jobs
+- let your platform decide how async jobs are polled
+
+The crate has no external dependencies. It is built from `core` primitives, so
+platform developers can bring their own allocator, IO, scheduler, task model,
+and output buffers.
+
+## Why this layout is useful
+
+Shell Vessel separates the shell into the pieces platform code naturally cares
+about.
+
+The command registry is fixed-capacity and const-generic, so the memory shape is
+known up front:
+
+```rust
+let mut vessel = Vessel::<MAX_CMDS, MAX_JOBS>::new();
+```
+
+Commands are just metadata plus callbacks. You can expose common commands from
+`shvessel::cmd`, or define your own command set beside your platform code:
+
+```rust
+const ECHO: Command = Command::new("echo", "ec", "write arguments to output");
+const FOOBAR: Command = Command::new("foobar", "fb", "foobar example command");
+```
+
+Sync and async commands use the same registration and execution path. A sync
+command returns a result immediately. An async command returns a `PlatformJob`
+that your runtime later polls:
+
+```rust
+let _ = vessel.register(ECHO, CommandCallback::syn_call(echo_sync));
+let _ = vessel.register(FOOBAR, CommandCallback::asyn_call(foobar_async));
+```
+
+That means the shell does not need to know whether the platform is backed by a
+kernel task, an embedded driver operation, a simulator, or a userspace runtime.
+The platform keeps ownership of the real work, while Shell Vessel gives you a
+small, consistent command/job boundary.
+
+## Example
+
+This is the shape used by the fuller `/use` example.
+
+```rust
+use core::task::{Context, Poll};
+
+use shvessel::arg::Argument;
+use shvessel::callback::{CommandCall, CommandCallback, CommandResult};
+use shvessel::job::{JobTimeout, PlatformJob, PlatformRuntime};
+use shvessel::path::{Path, TextPath};
+use shvessel::vessel::Vessel;
+use shvessel::{Command, ReturnCodes};
+
+const ECHO: Command = Command::new("echo", "ec", "write arguments to output");
+const MYCOMMAND: Command = Command::new("mycommand", "my", "example async command");
+
+const MAX_CMDS: usize = 8;
+const MAX_JOBS: usize = 4;
+
+fn main() {
+    let mut vessel = Vessel::<MAX_CMDS, MAX_JOBS>::new();
+
+    let _ = vessel.register(ECHO, CommandCallback::syn_call(echo_sync));
+    let _ = vessel.register(MYCOMMAND, CommandCallback::asyn_call(mycommand_async));
+
+    let args = [
+        Argument::Path(Path::from_bytes(b"/raw/source")),
+        Argument::TextPath(TextPath::new("/text/dest")),
+    ];
+
+    let echo_job = vessel.execute_with_timeout("echo", &args, None);
+    let async_job = vessel.execute_with_timeout(
+        "mycommand",
+        &args,
+        Some(JobTimeout::new(30)),
+    );
+
+    let waker = std::task::Waker::from(std::sync::Arc::new(StdWake));
+    let mut context = Context::from_waker(&waker);
+    let mut runtime = StdRuntime;
+
+    if let Ok(job) = echo_job {
+        let _ = vessel.poll_job(job, &mut runtime, &mut context);
+    }
+
+    if let Ok(job) = async_job {
+        let _ = vessel.poll_job(job, &mut runtime, &mut context);
+    }
+
+    vessel.clean_all();
+}
+
+fn echo_sync(call: CommandCall<'_>) -> CommandResult {
+    for argument in call.arguments {
+        std::println!("{}", argument);
+    }
+
+    Ok(())
+}
+
+fn mycommand_async(_call: CommandCall<'_>) -> Result<PlatformJob, ReturnCodes> {
+    Ok(PlatformJob::new(1))
+}
+
+struct StdWake;
+
+impl std::task::Wake for StdWake {
+    fn wake(self: std::sync::Arc<Self>) {}
+}
+
+struct StdRuntime;
+
+impl PlatformRuntime for StdRuntime {
+    fn poll(&mut self, _job: PlatformJob, _context: &mut Context<'_>) -> Poll<CommandResult> {
+        Poll::Ready(Ok(()))
+    }
+}
+```
+
+In a real platform, `echo_sync` would write to your console, serial device, log
+buffer, framebuffer, or shell transport. `StdRuntime` in the example is only a
+host-side stand-in; your platform implements `PlatformRuntime` to connect Shell
+Vessel jobs to the scheduler or async operation model you already have.
+
+## Minimal sync command
+
+For a command that completes immediately, the setup is intentionally small:
+
+```rust
+use shvessel::callback::{CommandCall, CommandCallback, CommandResult};
+use shvessel::cmd;
+use shvessel::vessel::Vessel;
+
+fn main() {
+    let mut vessel = Vessel::<1, 1>::new();
+    let _ = vessel.register(cmd::ENVIRONMENT, CommandCallback::syn_call(env_sync));
+    let _ = vessel.execute("env", &[]);
+}
+
+fn env_sync(_call: CommandCall<'_>) -> CommandResult {
+    Ok(())
+}
+```
+
+## Examples
+
+- `/use` shows a fuller host-side demo with custom commands, arguments, sync
+  callbacks, async callbacks, job polling, and cleanup.
+- `/use_min` shows the smallest sync-only integration.
+
+## Fit
+
+Shell Vessel is a good fit when you want a command layer that is easy to embed,
+easy to audit, and easy to connect to platform-specific internals. It gives you
+the structure of a shell without deciding what your platform, scheduler, memory
+model, or IO layer must look like.
