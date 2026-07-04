@@ -8,13 +8,14 @@ use esp_hal::{
     clock::CpuClock,
     delay::Delay,
     main,
-    time::{Duration, Instant},
+    time::{Duration as EspDuration, Instant as EspInstant},
 };
 use esp_println::println;
 use shvessel::{
     callback::{CommandCall, CommandCallback, CommandResult},
     job::PlatformJob,
     mini_exec::{MiniExecutor, MiniTaskContext},
+    time::{Clock, Instant},
     vessel::Vessel,
     Command, ReturnCodes,
 };
@@ -47,6 +48,7 @@ fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let _peripherals = esp_hal::init(config);
     let delay = Delay::new();
+    let mut clock = EspClock;
 
     println!("SHVESSEL_ESP_HAL:boot");
 
@@ -77,7 +79,7 @@ fn main() -> ! {
     };
 
     loop {
-        exec.advance_to(now_ms());
+        exec.advance_from_clock(&mut clock);
 
         match vessel.poll_job(vessel_job, &mut exec, &mut context) {
             Ok(Poll::Pending) => {}
@@ -95,17 +97,21 @@ fn main() -> ! {
             }
         }
 
-        delay.delay(Duration::from_millis(1));
+        delay.delay(EspDuration::from_millis(1));
     }
 }
 
-fn now_ms() -> u64 {
-    Instant::now().duration_since_epoch().as_millis()
+struct EspClock;
+
+impl Clock for EspClock {
+    fn now(&mut self) -> Instant {
+        Instant::from_millis(EspInstant::now().duration_since_epoch().as_millis())
+    }
 }
 
 fn halt(delay: Delay) -> ! {
     loop {
-        delay.delay(Duration::from_millis(1000));
+        delay.delay(EspDuration::from_millis(1000));
     }
 }
 

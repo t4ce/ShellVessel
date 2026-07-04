@@ -52,7 +52,7 @@ small, consistent command/job boundary.
 
 ## Example
 
-This is the shape used by the fuller `/use` example.
+This is the shape used by the fuller `/demos_tests/vessel_demo` example.
 
 ```rust
 use core::task::{Context, Poll};
@@ -157,9 +157,9 @@ fn env_sync(_call: CommandCall<'_>) -> CommandResult {
 
 ## Examples
 
-- `/use` shows a fuller host-side demo with custom commands, arguments, sync
-  callbacks, async callbacks, job polling, and cleanup.
-- `/use_min` shows the smallest sync-only integration.
+- `/demos_tests/vessel_demo` shows a fuller host-side demo with custom commands,
+  arguments, sync callbacks, async callbacks, job polling, and cleanup.
+- `/demos_tests/vessel_demo_min` shows the smallest sync-only integration.
 - `cargo run --example mini_exec_proof --features mini_exec` shows the optional
   mini executor bridge and prints proof markers:
 
@@ -168,8 +168,9 @@ SHVESSEL_MINI_EXEC:spawned:1
 SHVESSEL_MINI_EXEC:woke_at:25ms
 SHVESSEL_MINI_EXEC:done
 ```
-- `/esp32s3-mini-exec` is a contained `esp-hal` ESP32-S3 project that runs the
-  same bridge on hardware and prints `SHVESSEL_ESP_HAL:*` proof markers.
+- `/demos_tests/executor_demo_esp32s3` is a contained `esp-hal` ESP32-S3 project
+  that runs the same bridge on hardware and prints `SHVESSEL_ESP_HAL:*` proof
+  markers.
 
 ## Optional mini executor
 
@@ -186,12 +187,30 @@ The executor is fixed-capacity and platform-clock driven. A command callback can
 spawn a mini task and return its `PlatformJob`; `Vessel::poll_job` then polls the
 same executor through the existing `PlatformRuntime` trait.
 
+Shell Vessel also includes a small `shvessel::time` module because `core` has no
+clock or duration type. Platforms provide a tiny `Clock` adapter, then drive the
+executor from that adapter:
+
+```rust,ignore
+use shvessel::time::{Clock, Instant};
+
+struct BoardClock;
+
+impl Clock for BoardClock {
+    fn now(&mut self) -> Instant {
+        Instant::from_millis(platform_now_ms())
+    }
+}
+
+exec.advance_from_clock(&mut clock);
+```
+
 On an ESP32-S3 `esp-hal` application, the platform loop would typically:
 
 ```text
 read UART or USB-serial input
 execute commands through Vessel
-advance MiniExecutor with SYSTIMER/timer milliseconds
+advance MiniExecutor from the platform Clock
 poll ready Vessel jobs
 sleep or wait for the next serial/timer interrupt
 ```

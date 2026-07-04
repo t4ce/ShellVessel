@@ -5,6 +5,7 @@ use core::task::{Context, Poll, Waker};
 use shvessel::callback::{CommandCall, CommandCallback, CommandResult};
 use shvessel::job::PlatformJob;
 use shvessel::mini_exec::{MiniExecutor, MiniTaskContext};
+use shvessel::time::{Duration, ManualClock};
 use shvessel::vessel::Vessel;
 use shvessel::{Command, ReturnCodes};
 
@@ -14,7 +15,7 @@ fn delay_task(mut task: MiniTaskContext<'_>) -> Poll<CommandResult> {
     match task.state() {
         0 => {
             task.set_state(1);
-            task.sleep_for(10);
+            task.sleep_for_duration(Duration::from_millis(10));
             Poll::Pending
         }
         1 => Poll::Ready(Ok(())),
@@ -43,6 +44,7 @@ fn spawn_delay(mut call: CommandCall<'_>) -> Result<PlatformJob, ReturnCodes> {
 fn vessel_polls_mini_executor_jobs_to_completion() {
     let mut vessel = Vessel::<1, 1>::new();
     let mut exec = MiniExecutor::<4>::new();
+    let mut clock = ManualClock::zero();
     let callback =
         CommandCallback::asyn_call_with_context(spawn_delay, (&mut exec as *mut _) as *mut ());
     let waker = Waker::noop();
@@ -55,15 +57,20 @@ fn vessel_polls_mini_executor_jobs_to_completion() {
         vessel.poll_job(vessel_job, &mut exec, &mut context),
         Ok(Poll::Pending)
     );
-    assert_eq!(exec.ms_until_next_deadline(), Some(10));
+    assert_eq!(
+        exec.duration_until_next_deadline(),
+        Some(Duration::from_millis(10))
+    );
 
-    exec.advance_to(9);
+    clock.advance_millis(9);
+    exec.advance_from_clock(&mut clock);
     assert_eq!(
         vessel.poll_job(vessel_job, &mut exec, &mut context),
         Ok(Poll::Pending)
     );
 
-    exec.advance_to(10);
+    clock.advance_millis(1);
+    exec.advance_from_clock(&mut clock);
     assert_eq!(
         vessel.poll_job(vessel_job, &mut exec, &mut context),
         Ok(Poll::Ready(Ok(())))

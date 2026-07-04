@@ -19,4 +19,10 @@ path = "src/lib.rs"
 
 [[example]]
 name = "mini_exec_proof"
+path = "demos_tests/executor_test/mini_exec_test.rs"
+required-features = ["mini_exec"]
+
+[[test]]
+name = "mini_exec_test"
+path = "demos_tests/executor_demo/mini_exec.rs"
 required-features = ["mini_exec"]

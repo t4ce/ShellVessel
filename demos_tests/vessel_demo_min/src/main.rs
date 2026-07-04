@@ -3,7 +3,7 @@ use shvessel::cmd;
 use shvessel::vessel::Vessel;
 
 // This Example is so minimal simple sync call (no poll needed)
-// For reference see the /use/ demo
+// For reference see the /demos_tests/vessel_demo demo
 
 fn main() {
     let mut vessel = Vessel::<1, 1>::new();

@@ -6,7 +6,7 @@ feature on real ESP32-S3 hardware.
 The app:
 
 - initializes `esp-hal`
-- uses `esp_hal::time::Instant` as the platform clock
+- adapts `esp_hal::time::Instant` into `shvessel::time::Clock`
 - runs `Vessel + MiniExecutor`
 - prints proof markers through `esp-println`
 
@@ -60,6 +60,7 @@ ESPFLASH_PORT=/dev/ttyACM0 cargo run --release
 ## Notes
 
 This proof intentionally has no command parser yet. It exercises the hardware
-clock, printing path, `Vessel`, `MiniExecutor`, and `PlatformRuntime` bridge.
+clock adapter, printing path, `Vessel`, `MiniExecutor`, and `PlatformRuntime`
+bridge.
 The next step is replacing the automatic `prove` execution with a UART or USB
 serial command input loop.

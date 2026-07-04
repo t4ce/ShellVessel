@@ -9,4 +9,4 @@ publish = false
 esp-backtrace = { version = "0.19.0", features = ["esp32s3", "panic-handler", "println"] }
 esp-hal = { version = "1.1.1", features = ["esp32s3"] }
 esp-println = { version = "0.17.0", features = ["esp32s3"] }
-shvessel = { path = "..", features = ["mini_exec"] }
+shvessel = { path = "../..", features = ["mini_exec"] }

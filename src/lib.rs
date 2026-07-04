@@ -11,6 +11,7 @@ pub mod mini_exec;
 pub mod path;
 pub mod pretty;
 pub mod reg;
+pub mod time;
 pub mod vessel;
 
 pub const COMMAND_REGISTRY_CAPACITY: usize = 1;

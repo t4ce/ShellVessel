@@ -3,6 +3,7 @@ use core::task::{Context, Poll};
 use crate::ReturnCodes;
 use crate::callback::CommandResult;
 use crate::job::{PlatformJob, PlatformRuntime};
+use crate::time::{Clock, Duration, Instant};
 
 pub type MiniTaskPoll = fn(MiniTaskContext<'_>) -> Poll<CommandResult>;
 
@@ -73,6 +74,10 @@ impl<'a> MiniTaskContext<'a> {
         self.now_ms
     }
 
+    pub const fn now(&self) -> Instant {
+        Instant::from_millis(self.now_ms)
+    }
+
     pub const fn state(&self) -> i32 {
         self.task.state
     }
@@ -99,8 +104,16 @@ impl<'a> MiniTaskContext<'a> {
         self.task.deadline_ms = Some(deadline_ms);
     }
 
+    pub const fn sleep_until_instant(&mut self, deadline: Instant) {
+        self.sleep_until(deadline.as_millis());
+    }
+
     pub const fn sleep_for(&mut self, delay_ms: u64) {
         self.sleep_until(self.now_ms.wrapping_add(delay_ms));
+    }
+
+    pub const fn sleep_for_duration(&mut self, delay: Duration) {
+        self.sleep_for(delay.as_millis());
     }
 }
 
@@ -123,9 +136,23 @@ impl<const CAPACITY: usize> MiniExecutor<CAPACITY> {
         self.now_ms
     }
 
+    pub const fn now(&self) -> Instant {
+        Instant::from_millis(self.now_ms)
+    }
+
     pub fn advance_to(&mut self, now_ms: u64) {
         self.now_ms = now_ms;
         self.wake_expired();
+    }
+
+    pub fn advance_to_instant(&mut self, now: Instant) {
+        self.advance_to(now.as_millis());
+    }
+
+    pub fn advance_from_clock<C: Clock>(&mut self, clock: &mut C) -> Instant {
+        let now = clock.now();
+        self.advance_to_instant(now);
+        now
     }
 
     pub fn spawn(
@@ -231,9 +258,17 @@ impl<const CAPACITY: usize> MiniExecutor<CAPACITY> {
         best
     }
 
+    pub fn next_deadline(&self) -> Option<Instant> {
+        self.next_deadline_ms().map(Instant::from_millis)
+    }
+
     pub fn ms_until_next_deadline(&self) -> Option<u64> {
         self.next_deadline_ms()
             .map(|deadline| deadline.saturating_sub(self.now_ms))
+    }
+
+    pub fn duration_until_next_deadline(&self) -> Option<Duration> {
+        self.ms_until_next_deadline().map(Duration::from_millis)
     }
 
     pub fn task(&self, job: PlatformJob) -> Option<&MiniTask> {
